@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Maestra: Logging en Python</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom scrollbar for code blocks */
+        .code-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .code-scroll::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        .code-scroll::-webkit-scrollbar-thumb {
+            background: #4a5568; 
+            border-radius: 4px;
+        }
+        
+        /* Animation classes for the simulator */
+        .flow-path {
+            transition: all 0.5s ease;
+            opacity: 0.2;
+            stroke-dasharray: 10;
+            stroke-dashoffset: 100;
+        }
+        .flow-active {
+            opacity: 1;
+            stroke: #10B981; /* Emerald 500 */
+            stroke-dashoffset: 0;
+            animation: dash 1s linear forwards;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        .handler-box {
+            transition: all 0.3s ease;
+        }
+        .handler-active {
+            border-color: #10B981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            transform: scale(1.02);
+        }
+        
+        /* Chart container constraint */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals & Python Blue/Yellow accents. 
+         Background: bg-stone-50. 
+         Primary Text: text-slate-800. 
+         Accents: blue-600, amber-500, emerald-500 for success/logs. 
+    -->
+</head>
+<body class="bg-stone-50 text-slate-800 font-sans leading-relaxed">
+
+    <!-- Application Structure Plan:
+         1. Hero Section: Introduction to the importance of logging (The "Why").
+         2. Interactive Levels (The "What"): A Chart.js visualization showing the inverse relationship between log volume and severity.
+         3. Architecture Simulator (The "How"): The core interactive piece. A visual flow diagram where users generate logs of different levels and see how a "Professional" setup routes them (Console vs. File).
+         4. File Management: Visual explanation of Rotation.
+         5. Pro-Tips: Card grid for best practices.
+         
+         Why this structure? It moves from concept -> implementation -> optimization, mirroring the learning curve from basic scripts to production pipelines.
+    -->
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+                Guía Maestra de <span class="text-amber-400">Logging</span> en Python 🪵
+            </h1>
+            <p class="text-xl text-slate-300 max-w-3xl mx-auto">
+                Transforma tus scripts básicos en aplicaciones auditables de grado profesional.
+                Aprende a filtrar, enrutar y gestionar eventos en el ecosistema de Ciencia de Datos.
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
+
+        <!-- SECTION 1: Niveles de Severidad -->
+        <section id="levels" class="scroll-mt-20">
+            <div class="mb-8 text-center max-w-3xl mx-auto">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">1. La Jerarquía de Severidad</h2>
+                <p class="text-lg text-slate-600">
+                    El logging funciona como un embudo inteligente. Entender los niveles es clave para separar el "ruido" de diagnóstico de las alertas críticas.
+                    Interactúa con el gráfico para ver cuándo usar cada nivel.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                    
+                    <!-- Interactive Chart -->
+                    <div class="lg:col-span-2">
+                        <div class="chart-container">
+                            <canvas id="levelsChart"></canvas>
+                        </div>
+                        <p class="text-center text-sm text-slate-400 mt-2">
+                            *Volumen vs. Importancia: DEBUG genera muchos datos, CRITICAL muy pocos.
+                        </p>
+                    </div>
+
+                    <!-- Dynamic Details Panel -->
+                    <div class="lg:col-span-1 bg-stone-50 rounded-xl p-6 border border-stone-200 h-full flex flex-col justify-center">
+                        <div id="level-details" class="transition-opacity duration-300">
+                            <span id="level-badge" class="inline-block px-3 py-1 rounded-full text-sm font-semibold mb-4 bg-slate-200 text-slate-700">Selecciona una barra</span>
+                            <h3 id="level-title" class="text-2xl font-bold mb-2">Explora los Niveles</h3>
+                            <div class="text-4xl font-mono text-slate-300 mb-4" id="level-value">--</div>
+                            <p id="level-desc" class="text-slate-600">
+                                Haz clic en las barras del gráfico para ver la definición exacta, el valor numérico y un ejemplo de uso para cada nivel de logging.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Simulador de Arquitectura -->
+        <section id="architecture" class="scroll-mt-20">
+            <div class="mb-8 max-w-3xl">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">2. Arquitectura Profesional (Multi-Handler)</h2>
+                <p class="text-lg text-slate-600 mb-6">
+                    En producción, no queremos verlo todo en la pantalla. El patrón profesional usa <strong>Handlers</strong> para enviar logs ligeros a la consola (INFO+) y un historial detallado a un archivo (DEBUG+).
+                </p>
+            </div>
+
+            <!-- Simulator UI -->
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                <!-- Controls -->
+                <div class="bg-slate-100 p-6 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-700 text-lg">Simulador de Flujo de Datos</h3>
+                        <p class="text-sm text-slate-500">Genera un evento y observa cómo se enruta.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label for="log-level-select" class="text-sm font-medium text-slate-600">Nivel del Evento:</label>
+                        <select id="log-level-select" class="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                            <option value="10">DEBUG (10)</option>
+                            <option value="20">INFO (20)</option>
+                            <option value="30">WARNING (30)</option>
+                            <option value="40">ERROR (40)</option>
+                            <option value="50">CRITICAL (50)</option>
+                        </select>
+                        <button onclick="simulateLog()" class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none transition-colors shadow-md">
+                            Generar Log
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visual Diagram -->
+                <div class="p-8 relative min-h-[400px] flex flex-col items-center justify-center bg-stone-50">
+                    
+                    <!-- Source: Logger -->
+                    <div class="relative z-10 w-48 text-center p-4 bg-slate-800 text-white rounded-lg shadow-lg mb-12">
+                        <div class="font-mono text-xs text-slate-400 mb-1">LOGGER ROOT</div>
+                        <div class="font-bold">Aplicación Python</div>
+                        <div class="text-xs mt-1 text-emerald-400">Nivel Base: DEBUG</div>
+                    </div>
+
+                    <!-- Flow Lines SVG -->
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;">
+                        <!-- Path to Console -->
+                        <path id="path-console" d="M 50% 120 L 50% 180 L 30% 180 L 30% 250" fill="none" stroke="#cbd5e1" stroke-width="4" class="flow-path"/>
+                        <!-- Path to File -->
+                        <path id="path-file" d="M 50% 120 L 50% 180 L 70% 180 L 70% 250" fill="none" stroke="#cbd5e1" stroke-width="4" class="flow-path"/>
+                    </svg>
+
+                    <!-- Destinations -->
+                    <div class="grid grid-cols-2 gap-24 w-full max-w-4xl relative z-10">
+                        
+                        <!-- Console Branch -->
+                        <div id="box-console" class="handler-box border-2 border-slate-300 bg-white p-5 rounded-xl text-center">
+                            <div class="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                <span class="text-2xl">🖥️</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800">Console Handler</h4>
+                            <p class="text-xs text-slate-500 mb-2">Filtro: INFO (20+)</p>
+                            <div id="output-console" class="h-20 bg-slate-900 rounded p-2 text-left overflow-hidden">
+                                <p class="text-xs text-slate-500 font-mono italic">Esperando logs...</p>
+                            </div>
+                        </div>
+
+                        <!-- File Branch -->
+                        <div id="box-file" class="handler-box border-2 border-slate-300 bg-white p-5 rounded-xl text-center">
+                            <div class="mx-auto w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mb-3">
+                                <span class="text-2xl">📂</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800">File Handler</h4>
+                            <p class="text-xs text-slate-500 mb-2">Filtro: DEBUG (10+)</p>
+                            <div id="output-file" class="h-20 bg-amber-50 border border-amber-100 rounded p-2 text-left overflow-hidden">
+                                <p class="text-xs text-slate-400 font-mono italic">Esperando logs...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- Code Preview -->
+                <div class="bg-slate-900 p-6 border-t border-slate-700">
+                    <h4 class="text-white text-sm font-bold mb-3 uppercase tracking-wider">Código de Implementación</h4>
+                    <pre class="code-scroll overflow-x-auto text-xs sm:text-sm text-blue-200 font-mono p-4 bg-slate-800 rounded-lg">
+def get_production_logger(log_file):
+    logger = logging.getLogger("App")
+    logger.setLevel(logging.DEBUG)  # El logger captura todo
+
+    # Consola: Solo lo importante
+    c_handler = logging.StreamHandler()
+    c_handler.setLevel(logging.INFO)
+
+    # Archivo: Detalle forense completo
+    f_handler = logging.FileHandler(log_file)
+    f_handler.setLevel(logging.DEBUG)
+
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+    return logger</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Gestión de Archivos & Rotación -->
+        <section class="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">3. Gestión de Archivos (Rotación)</h2>
+                <div class="prose text-slate-600">
+                    <p class="mb-4">
+                        En Ciencia de Datos, un entrenamiento puede durar días. Si usamos <code>FileHandler</code> simple en modo <code>DEBUG</code>, el archivo podría crecer hasta llenar el disco duro.
+                    </p>
+                    <p class="mb-4">
+                        La solución es <strong>RotatingFileHandler</strong>. Funciona como una "grabadora de seguridad": cuando el archivo actual se llena, se guarda y se crea uno nuevo. Si se supera el límite de copias, se borra la más antigua.
+                    </p>
+                    <ul class="list-disc pl-5 space-y-2 text-slate-700">
+                        <li><strong>maxBytes:</strong> Tamaño límite antes de rotar.</li>
+                        <li><strong>backupCount:</strong> Cuántos archivos históricos guardar.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="bg-amber-50 p-6 rounded-2xl border border-amber-200 shadow-inner">
+                <h3 class="font-bold text-amber-900 mb-4 flex items-center gap-2">
+                    <span>🔄</span> Ejemplo Visual
+                </h3>
+                <div class="space-y-3 font-mono text-xs sm:text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400">app.log</span>
+                        <div class="flex-1 h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-500 w-3/4"></div>
+                        </div>
+                        <span class="text-emerald-600">Activo (75%)</span>
+                    </div>
+                    <div class="flex items-center gap-2 opacity-70">
+                        <span class="text-slate-400">app.log.1</span>
+                        <div class="flex-1 h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-slate-500 w-full"></div>
+                        </div>
+                        <span class="text-slate-500">Completo</span>
+                    </div>
+                    <div class="flex items-center gap-2 opacity-50">
+                        <span class="text-slate-400">app.log.2</span>
+                        <div class="flex-1 h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-slate-500 w-full"></div>
+                        </div>
+                        <span class="text-slate-500">Respaldo</span>
+                    </div>
+                    <div class="mt-4 p-3 bg-white rounded border border-amber-100 text-amber-800">
+                        <code>handler = RotatingFileHandler('app.log', maxBytes=5MB, backupCount=3)</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Mejores Prácticas -->
+        <section>
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">4. Pro-Tips y Mejores Prácticas</h2>
+                <p class="text-lg text-slate-600">Consejos esenciales para mantener tu código limpio y profesional.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Tip Card 1 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 text-xl">🚫</div>
+                    <h3 class="font-bold text-slate-900 mb-2">No uses print()</h3>
+                    <p class="text-sm text-slate-600">
+                        Los prints no tienen timestamps, no se pueden filtrar y siempre van a la consola (bloqueante). Usa <code>logger.info()</code>.
+                    </p>
+                </div>
+
+                <!-- Tip Card 2 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 text-xl">🏷️</div>
+                    <h3 class="font-bold text-slate-900 mb-2">Nomenclatura Modular</h3>
+                    <p class="text-sm text-slate-600">
+                        Usa <code>logging.getLogger(__name__)</code>. Esto crea un logger con el nombre del archivo actual, facilitando saber dónde ocurrió el error.
+                    </p>
+                </div>
+
+                <!-- Tip Card 3 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4 text-xl">🐛</div>
+                    <h3 class="font-bold text-slate-900 mb-2">Excepciones con Traza</h3>
+                    <p class="text-sm text-slate-600">
+                        Dentro de un bloque <code>except</code>, usa <code>logger.exception("Error")</code> para incluir automáticamente el Stack Trace completo.
+                    </p>
+                </div>
+
+                <!-- Tip Card 4 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-4 text-xl">⚡</div>
+                    <h3 class="font-bold text-slate-900 mb-2">Performance</h3>
+                    <p class="text-sm text-slate-600">
+                        Evita operaciones pesadas o formateo de strings complejo en llamadas <code>DEBUG</code> dentro de bucles intensivos.
+                    </p>
+                </div>
+
+                <!-- Tip Card 5 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 text-xl">🔒</div>
+                    <h3 class="font-bold text-slate-900 mb-2">Seguridad (PII)</h3>
+                    <p class="text-sm text-slate-600">
+                        Nunca registres contraseñas, tokens de API o datos personales. Los logs suelen tener menor seguridad que las bases de datos.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="mb-2">Desarrollado con <span class="text-red-500">❤</span> para Python Data Science Mentor</p>
+            <p class="text-sm">Basado en la Guía Maestra de Logging.</p>
+        </div>
+    </footer>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        // --- 1. CHARTS CONFIGURATION ---
+        const setupCharts = () => {
+            const ctx = document.getElementById('levelsChart').getContext('2d');
+            
+            // Data derived from the "Hierarchy" section of the report
+            const data = {
+                labels: ['DEBUG (10)', 'INFO (20)', 'WARNING (30)', 'ERROR (40)', 'CRITICAL (50)'],
+                datasets: [{
+                    label: 'Volumen de Datos Típico',
+                    data: [100, 60, 30, 10, 5], // Hypothetical volume to show concept
+                    backgroundColor: [
+                        'rgba(148, 163, 184, 0.6)', // Slate 400
+                        'rgba(16, 185, 129, 0.6)',  // Emerald 500
+                        'rgba(245, 158, 11, 0.6)',  // Amber 500
+                        'rgba(239, 68, 68, 0.6)',   // Red 500
+                        'rgba(153, 27, 27, 0.8)'    // Red 900
+                    ],
+                    borderColor: [
+                        'rgba(148, 163, 184, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(153, 27, 27, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+
+            const levelsInfo = {
+                0: { title: "DEBUG (10)", val: 10, desc: "Diagnóstico técnico detallado. Útil para desarrolladores (ej. valores de variables, pasos de bucles). Se filtra en producción.", color: "text-slate-500" },
+                1: { title: "INFO (20)", val: 20, desc: "Confirmación de que las cosas funcionan. Hitos generales (ej. 'Servidor iniciado', 'Proceso X completado').", color: "text-emerald-500" },
+                2: { title: "WARNING (30)", val: 30, desc: "Algo inesperado pasó, pero el software sigue funcionando (ej. 'Espacio en disco bajo'). Una advertencia preventiva.", color: "text-amber-500" },
+                3: { title: "ERROR (40)", val: 40, desc: "Fallo grave. Una función específica no pudo ejecutarse (ej. 'Conexión a BD fallida'). Requiere atención.", color: "text-red-500" },
+                4: { title: "CRITICAL (50)", val: 50, desc: "Error fatal. La aplicación entera podría detenerse o estar corrupta. Requiere intervención inmediata.", color: "text-red-900" }
+            };
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return "Volumen Relativo: " + context.raw + "%";
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Volumen de Logs' }
+                        }
+                    },
+                    onClick: (e, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            updateLevelDetails(index);
+                        }
+                    },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                    }
+                }
+            });
+
+            // Set default view to INFO
+            updateLevelDetails(1);
+
+            function updateLevelDetails(index) {
+                const info = levelsInfo[index];
+                const panel = document.getElementById('level-details');
+                const badge = document.getElementById('level-badge');
+                
+                // Fade out
+                panel.style.opacity = '0.5';
+                
+                setTimeout(() => {
+                    document.getElementById('level-title').innerText = info.title;
+                    document.getElementById('level-title').className = `text-2xl font-bold mb-2 ${info.color}`;
+                    document.getElementById('level-value').innerText = `Valor: ${info.val}`;
+                    document.getElementById('level-desc').innerText = info.desc;
+                    badge.innerText = "Nivel Seleccionado";
+                    badge.className = `inline-block px-3 py-1 rounded-full text-sm font-semibold mb-4 bg-slate-100 ${info.color}`;
+                    
+                    // Fade in
+                    panel.style.opacity = '1';
+                }, 200);
+            }
+        };
+
+        // --- 2. ARCHITECTURE SIMULATOR LOGIC ---
+        const simulateLog = () => {
+            const levelSelect = document.getElementById('log-level-select');
+            const levelValue = parseInt(levelSelect.value);
+            const levelName = levelSelect.options[levelSelect.selectedIndex].text.split(' ')[0];
+            
+            // Handlers Configuration (Matches the "Production Logger" in the guide)
+            // Console accepts INFO (20) and up
+            // File accepts DEBUG (10) and up
+            const consoleThreshold = 20;
+            const fileThreshold = 10;
+
+            const consolePath = document.getElementById('path-console');
+            const filePath = document.getElementById('path-file');
+            const consoleBox = document.getElementById('box-console');
+            const fileBox = document.getElementById('box-file');
+            const consoleOutput = document.getElementById('output-console');
+            const fileOutput = document.getElementById('output-file');
+
+            // Reset animations
+            consolePath.classList.remove('flow-active');
+            filePath.classList.remove('flow-active');
+            consoleBox.classList.remove('handler-active');
+            fileBox.classList.remove('handler-active');
+            
+            // Trigger reflow to restart animation
+            void consolePath.offsetWidth; 
+
+            // Logic: Where does the log go?
+            let sentToConsole = levelValue >= consoleThreshold;
+            let sentToFile = levelValue >= fileThreshold;
+
+            const timestamp = new Date().toLocaleTimeString();
+
+            // Animate Console Path
+            if (sentToConsole) {
+                consolePath.classList.add('flow-active');
+                setTimeout(() => {
+                    consoleBox.classList.add('handler-active');
+                    addLogLine(consoleOutput, `[${levelName}] ${timestamp}: Evento simulado`, "text-emerald-400");
+                    setTimeout(() => consoleBox.classList.remove('handler-active'), 500);
+                }, 1000); // Wait for path animation
+            }
+
+            // Animate File Path
+            if (sentToFile) {
+                filePath.classList.add('flow-active');
+                setTimeout(() => {
+                    fileBox.classList.add('handler-active');
+                    // File gets more detail per the guide
+                    addLogLine(fileOutput, `${timestamp} | root | ${levelName} | sim_logging.py:84 | Evento simulado`, "text-slate-600");
+                    setTimeout(() => fileBox.classList.remove('handler-active'), 500);
+                }, 1000);
+            }
+        };
+
+        const addLogLine = (container, text, colorClass) => {
+            const p = document.createElement('p');
+            p.className = `text-xs font-mono mb-1 border-b border-slate-700/10 pb-1 ${colorClass}`;
+            p.innerText = text;
+            container.prepend(p);
+            // Keep only last 3 logs
+            if (container.children.length > 3) container.lastChild.remove();
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCharts();
+        });
+
+    </script>
+    
+    <!-- Visualization & Content Choices:
+         1. Hierarchy Chart: Used a Bar Chart (Chart.js) to visualize the abstract concept of "Log Volume" vs "Severity". This helps users understand *why* we filter logs (to avoid drowning in DEBUG data).
+         2. Simulator: Custom HTML/CSS/JS diagram. Used instead of static images to demonstrate the *logic* of Handlers. It reinforces the "Multi-Handler" section of the guide by showing how one event splits into two paths based on thresholds.
+         3. File Rotation: Static HTML visualization using progress bars. Simple and effective for showing the concept of filling up and swapping.
+         4. NO SVG/Mermaid: All graphics are DOM elements or Canvas (Chart.js).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</body>
+</html>
