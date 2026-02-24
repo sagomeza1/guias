@@ -130,7 +130,7 @@ notificador.enviar_alerta("¡Principio D aplicado!")
 
 |Letra|Principio|Utilidad Práctica|
 |-----|---------|-----------------|
-|S|Responsabilidad Única|Separa la limpieza de datos Pre-procesamiento) de la lógica del modelo.|
+|S|Responsabilidad Única|Separa la limpieza de datos (Pre-procesamiento) de la lógica del modelo.|
 |O|Abierto/Cerrado|Permite añadir nuevos modelos de ML sin cambiar el pipeline de evaluación.|
 |L|Sustitución de Liskov|Asegura que cualquier modelo (XGBoost, Random Forest) funcione en el mismo predictor.|
 |I|Segregación de Interfaz|No obligues a un modelo simple a implementar métodos complejos de Deep Learning.|
