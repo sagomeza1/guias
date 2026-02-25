@@ -179,3 +179,89 @@ store> db.producst.find({_id:ObjectId("699f24d287c7f026c9025dac")})
   }
 ]
 ```
+### Operadores
+
+
+Listado de operadores de actualización:
+|Operador|Función|
+|--------|-------|
+|`$set:` | Asigna un valor específico a un atributo. |
+|`$inc:` |Incrementa el valor de un atributo numérico en una cantidad específica. |
+|`$mul:` |Multiplica el valor de un atributo numérico por un factor específico. |
+|`$rename:` |Cambia el nombre de un atributo. |
+|`$unset:`| Elimina un atributo de un documento. |
+|`$min:` | Actualiza el valor de un atributo con el valor mínimo especificado, sólo si el valor actual es mayor que el valor especificado. |
+|`$max:` | Actualiza el valor de un atributo con el valor máximo especificado, sólo si el valor actual es menor que el valor especificado. |
+|`$currentDate:` | Establece el valor de un atributo como la fecha y hora actual. |
+|`$addToSet:` | Añade un valor a un atributo de tipo conjunto (`array`), sólo si el valor no existe en el conjunto. |
+|`$pop:` | Elimina el primer o último elemento de un atributo de tipo conjunto (`array`). |
+|`$pull:` | Elimina un valor específico de un atributo de tipo conjunto (`array`). |
+|`$push:` | Añade un valor a un atributo de tipo conjunto (`array`). |
+|`$pullAll:` | Elimina varios valores específicos de un atributo de tipo conjunto (`array`).|
+
+Para actualizar varios documentos se usa `db.products.updateMany()`:
+
+```shell
+use("store")
+
+db.products.updateMany(
+    // query
+    {price:{$lt:10}},
+    // actualizacioń
+    {
+        $set:{
+            tax:0.05
+        }
+    }
+);
+```
+
+Para modificar todos los productos, la query debe estar vacia:
+```shell
+use("store")
+
+db.products.updateMany(
+    // query
+    {},
+    // actualizacioń
+    {
+        $push:{
+            target: {
+            $in : ["tag c", "tag f"]
+            }
+        }
+    }
+);
+```
+
+### UPSERT
+
+Para realizar un upsert:
+```shell
+use("store")
+
+db.iot.updateOne({
+  sensor: "A001",
+  date: "2025-01-31"
+}, {
+  $push:{
+    reading: 1212
+    }
+}, {
+  upsert: true
+})
+```
+Si no se presenta el registro, se crea de forma automática
+
+## Eliminar documentos
+
+```shell
+// Elimina un doc
+db.products.deleteOne({ _id: 1 });
+// Elimina de acuerdo al filtro
+db.products.deleteMany({ price: 100 });
+// Elimina todos los docs
+db.products.drop();
+```
+
+<!--  -->
