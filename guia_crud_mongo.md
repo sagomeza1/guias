@@ -5,7 +5,7 @@ Esta guía resume las operaciones fundamentales para gestionar datos de sensores
 ## 🏗️ 1. Modelado de Datos (Estructura Sugerida)
 
 En IoT, priorizamos el **Embedding** (incrustar) para mantener la relación temporal de las lecturas.
-```json
+```shell
 {
   "sensor_id": "TERM-001",
   "timestamp": "2026-02-24T21:30:00Z",
@@ -45,7 +45,7 @@ coleccion.insert_one(nueva_lectura)
 
 ### 🐚 Mongo Shell
 
-```json
+```shell
 db.lecturas_sensores.insertOne({
   sensor_id: "TERM-001",
   timestamp: new Date(),
@@ -66,7 +66,7 @@ Consultar datos usando filtros y operadores de comparación.
 
 ### 🐚 Mongo Shell (Ejemplo: Filtro por temperatura alta)
 
-```json
+```shell
 db.lecturas_sensores.find({
   "ubicacion": "Planta_A",
   "lectura.valor": { $gte: 25 }
@@ -81,7 +81,7 @@ Modificar campos existentes sin sobreescribir el documento completo.
 
 ### 🐚 Mongo Shell
 
-```json
+```shell
 db.lecturas_sensores.updateOne(
   { "sensor_id": "TERM-001" },
   { $set: { "ubicacion": "Planta_B" } }
@@ -93,7 +93,7 @@ Limpieza de datos erróneos o "outliers".
 
 ### 🐚 Mongo Shell
 
-```json
+```shell
 db.lecturas_sensores.deleteMany({
   "lectura.valor": { $gt: 100 }
 })
@@ -102,7 +102,7 @@ db.lecturas_sensores.deleteMany({
 ## 🚀 Consejo de Optimización
 
 Para que tus lecturas de datos sean rápidas, especialmente cuando tienes millones de registros de sensores, siempre crea índices en los campos que más consultas (como el ID del sensor o el tiempo):
-```json
+```shell
 // Crear índice ascendente por timestamp
 db.lecturas_sensores.createIndex({ "timestamp": 1 })
 ```
