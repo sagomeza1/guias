@@ -153,3 +153,14 @@ db.inspection.find({
     }
 )
 ```
+
+## Operador `$expr`
+
+El operador expressivo en MongoDB es una herramienta poderosa que permite realizar comparaciones y manipular datos de una manera más compleja y flexible. A diferencia de las consultas regulares, el operador expressivo te permite, por ejemplo, comparar campos dentro del mismo documento en lugar de compararlos con valores fijos. Este nivel de flexibilidad es ideal para situaciones en las que los datos cambian o son dinámicos.
+```shell
+db.monthlyBudget.find({
+  $expr: {
+    $gt: ["$spent", "$budget"]
+  }
+});
+```
